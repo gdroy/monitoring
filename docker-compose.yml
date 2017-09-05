@@ -1,0 +1,49 @@
+version: '3'
+services:
+  cadvisor:
+    image: local/cadvisor
+    ports:
+      - 8080:8080
+    volumes:
+      - /:/rootfs:ro   
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./files/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  oklog:
+    image: oklog/oklog:v0.2.1
+    command: ingeststore -store.segment-replication-factor 1
+    ports:
+      - 7650:7650
+      - 7651:7651
+      - 7653:7653
+      - 7659:7659
+    volumes:
+      - oklog_data:/data
+
+  logspout:
+    image: gliderlabs/logspout
+    command: syslog+tcp://oklog:7651
+    depends_on:
+      - oklog
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  oklog_data:
